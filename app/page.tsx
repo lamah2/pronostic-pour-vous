@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { supabase } from "./supabase";
 export default function Home() {
-
+const router = useRouter();
   const [prediction, setPrediction] = useState<any>(null);
 
   useEffect(() => {
@@ -34,9 +35,15 @@ export default function Home() {
           PRONOSTIC POUR VOUS
         </h1>
 
-        <button className="bg-green-500 hover:bg-green-600 px-5 py-2 rounded-lg font-semibold">
-          Connexion
-        </button>
+        <button
+  onClick={() => {
+  alert("BOUTON CLIQUE");
+  router.push("/connexion");
+}}
+  className="bg-green-500 hover:bg-green-600 px-5 py-2 rounded"
+>
+  Connexion
+</button>
       </header>
 
       <section className="flex flex-col items-center justify-center text-center px-6 py-24">
