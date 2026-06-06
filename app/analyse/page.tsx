@@ -24,7 +24,11 @@ const { data: profil } = await supabase
   .select("vip")
   .eq("id", session.user.id)
   .single();
-
+if (!profil?.vip) {
+  alert("Accès réservé aux membres VIP");
+  router.push("/");
+  return;
+}
 if (!profil || profil.vip !== true) {
   alert("Accès réservé aux membres VIP");
   router.push("/");
