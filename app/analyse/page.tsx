@@ -18,6 +18,18 @@ useEffect(() => {
       router.push("/connexion");
       return;
     }
+    // Vérifier si l'utilisateur est VIP
+const { data: profil } = await supabase
+  .from("profiles")
+  .select("vip")
+  .eq("id", session.user.id)
+  .single();
+
+if (!profil || profil.vip !== true) {
+  alert("Accès réservé aux membres VIP");
+  router.push("/");
+  return;
+}
     const { data, error, count } = await supabase
 .from("predictions")
 .select("*", { count: "exact" });
