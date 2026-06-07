@@ -19,11 +19,15 @@ useEffect(() => {
       return;
     }
     // Vérifier si l'utilisateur est VIP
-const { data: profil } = await supabase
+const { data: profil, error } = await supabase
   .from("profiles")
   .select("vip")
   .eq("id", session.user.id)
   .single();
+
+console.log("SESSION =", session.user.id);
+console.log("PROFIL =", profil);
+console.log("ERREUR =", error);
 if (!profil?.vip) {
   alert("Accès réservé aux membres VIP");
   router.push("/");
