@@ -19,9 +19,13 @@ async function connexion() {
   alert(error.message);
 } else {
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
+  data: { session },
+} = await supabase.auth.getSession();
 
+if (!session) {
+  router.push("/connexion");
+  return;
+}
   const { data: profil } = await supabase
     .from("profiles")
     .select("role")
