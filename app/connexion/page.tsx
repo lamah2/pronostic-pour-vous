@@ -16,10 +16,26 @@ async function connexion() {
   });
 
   if (error) {
-    alert(error.message);
-  } else {
+  alert(error.message);
+} else {
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  const { data: profil } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", session.user.id)
+    .single();
+
+  if (profil?.role === "admin") {
+    router.push("/admin");
+  } else if (profil?.role === "vip") {
     router.push("/analyse");
+  } else {
+    router.push("/");
   }
+}
 }
   return (
     <main className="min-h-screen bg-black text-white flex items-center justify-center p-6">
