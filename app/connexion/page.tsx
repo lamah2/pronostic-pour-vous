@@ -33,6 +33,7 @@ if (!session) {
     .single();
 
   if (profil?.role === "admin") {
+    console.log("PROFIL CONNEXION =", profil);
     router.push("/admin");
   } else if (profil?.role === "vip") {
     router.push("/analyse");
