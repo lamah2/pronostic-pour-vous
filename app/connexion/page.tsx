@@ -10,6 +10,7 @@ export default function ConnexionPage() {
 const [password, setPassword] = useState("");
 
 async function connexion() {
+  console.log("BOUTON CONNEXION CLIQUE");
   const { error } = await supabase.auth.signInWithPassword({
     email,
     password,
