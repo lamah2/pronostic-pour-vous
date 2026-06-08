@@ -32,14 +32,21 @@ if (!session) {
     .eq("id", session.user.id)
     .single();
 
-  if (profil?.role === "admin") {
-    console.log("PROFIL CONNEXION =", profil);
-    router.push("/admin");
-  } else if (profil?.role === "vip") {
-    router.push("/analyse");
-  } else {
-    router.push("/");
-  }
+  const { data: profil } = await supabase
+  .from("profiles")
+  .select("role")
+  .eq("id", session.user.id)
+  .single();
+
+console.log("PROFIL CONNEXION =", profil);
+
+if (profil?.role === "admin") {
+  router.push("/admin");
+} else if (profil?.role === "vip") {
+  router.push("/analyse");
+} else {
+  router.push("/");
+}
 }
 }
   return (
