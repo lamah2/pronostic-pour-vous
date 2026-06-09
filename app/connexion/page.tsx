@@ -23,14 +23,14 @@ async function connexion() {
   data: { session },
 } = await supabase.auth.getSession();
 
-if (!session) {
+if (!session?.user) {
   router.push("/connexion");
   return;
 }
   const { data: profil } = await supabase
     .from("profiles")
     .select("role")
-    .eq("id", session.user.id)
+    .eq("id", session?.user?.id)
     .single();
 
   const { data: profil } = await supabase
