@@ -38,10 +38,9 @@ if (!profil || profil.vip !== true) {
   router.push("/");
   return;
 }
-    const { data, error, count } = await supabase
-.from("predictions")
-.select("*", { count: "exact" });
-
+    const { data } = await supabase
+  .from("predictions")
+  .select("*");
 
 
 if (data && data.length > 0) {
