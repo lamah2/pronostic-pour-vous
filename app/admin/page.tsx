@@ -61,6 +61,9 @@ const [outsider2, setOutsider2] = useState("");
 const [grosRapport, setGrosRapport] = useState("");
 const [ticket, setTicket] = useState("");
 const [analysis, setAnalysis] = useState("");
+const [emailVip, setEmailVip] = useState("");
+const [dureeVip, setDureeVip] = useState(30);
+const [loadingVip, setLoadingVip] = useState(false);
   useEffect(() => {
   async function charger() {
     const { data, error } = await supabase
@@ -119,6 +122,32 @@ const { data, error } = await supabase
     alert("Erreur lors de la sauvegarde");
   } else {
     alert("Sauvegarde réussie !");
+  }
+}
+async function activerVip() {
+  setLoadingVip(true);
+
+  const dateDebut = new Date();
+
+  const dateFin = new Date();
+  dateFin.setDate(dateFin.getDate() + Number(dureeVip));
+
+  const { error } = await supabase
+    .from("profiles")
+    .update({
+      vip: true,
+      date_debut_vip: dateDebut.toISOString(),
+      date_fin_vip: dateFin.toISOString(),
+    })
+    .eq("email", emailVip);
+
+  setLoadingVip(false);
+
+  if (error) {
+    alert("Erreur activation VIP");
+  } else {
+    alert("VIP activé avec succès");
+    setEmailVip("");
   }
 }
 if (loading) {
@@ -217,7 +246,39 @@ if (loading) {
   className="bg-green-500 px-6 py-3 rounded font-bold"
 >
   Sauvegarder
-</button>
+  <h2 className="text-2xl font-bold text-green-400 mt-10 mb-4">
+  Gestion VIP
+</h2>
+
+<div className="bg-zinc-900 p-6 rounded-2xl space-y-4">
+  <input
+    type="email"
+    placeholder="Email utilisateur"
+    value={emailVip}
+    onChange={(e) => setEmailVip(e.target.value)}
+    className="w-full p-3 rounded bg-black border border-zinc-700"
+  />
+
+  <select
+    value={dureeVip}
+    onChange={(e) => setDureeVip(Number(e.target.value))}
+    className="w-full p-3 rounded bg-black border border-zinc-700"
+  >
+    <option value={7}>7 jours</option>
+    <option value={30}>30 jours</option>
+    <option value={90}>90 jours</option>
+    <option value={365}>365 jours</option>
+  </select>
+
+  <button
+    onClick={activerVip}
+    disabled={loadingVip}
+    className="bg-yellow-500 text-black px-6 py-3 rounded font-bold"
+  >
+    {loadingVip ? "Activation..." : "Activer VIP"}
+  </button>
+</div>
+
 
       </div>
     </main>
