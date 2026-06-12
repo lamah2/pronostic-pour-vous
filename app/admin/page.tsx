@@ -5,6 +5,7 @@ import { supabase } from "../supabase";
 
 export default function AdminPage() {
   const router = useRouter();
+  const [loading, setLoading] = useState(true);
 async function deconnexion() {
   await supabase.auth.signOut();
   window.location.href = "/connexion";
@@ -16,20 +17,33 @@ useEffect(() => {
 
 async function verifierAdmin() {
   const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  
-  
-  if (!user) {
-    window.location.href = "/connexion";
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  if (!session) {
+    router.push("/connexion");
     return;
+    setLoading(false);
   }
 
-  if (user.email !== "lamalsibaa@gmail.com") {
+  const { data: profil, error } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", session.user.id)
+    .single();
+
+  console.log("PROFIL ADMIN =", profil);
+  console.log("ERREUR ADMIN =", error);
+
+  if (!profil || profil.role !== "admin") {
     alert("Accès administrateur refusé");
     router.push("/");
+    return;
   }
+  setLoading(false);
 }
+
+
   const [reunion, setReunion] = useState("");
   const [course, setCourse] = useState("");
   const [hippodrome, setHippodrome] = useState("");
@@ -106,6 +120,15 @@ const { data, error } = await supabase
   } else {
     alert("Sauvegarde réussie !");
   }
+}
+if (loading) {
+  return (
+    <main className="min-h-screen bg-black flex items-center justify-center">
+      <h1 className="text-green-400 text-3xl">
+        Vérification...
+      </h1>
+    </main>
+  );
 }
   return (
     <main className="min-h-screen bg-black text-white p-10">
