@@ -27,19 +27,15 @@ if (!session?.user) {
   router.push("/connexion");
   return;
 }
-  const { data: profil } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", session?.user?.id)
-    .single();
+  
 
   const { data: profil } = await supabase
   .from("profiles")
   .select("role")
-  .eq("id", session.user.id)
+  .eq("id", session?.user?.id)
   .single();
 
-console.log("PROFIL CONNEXION =", profil);
+
 
 if (profil?.role === "admin") {
   router.push("/admin");
