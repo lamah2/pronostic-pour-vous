@@ -164,6 +164,28 @@ console.log("NB LIGNES =", data?.length);
     setEmailVip("");
   }
 }
+async function desactiverVip() {
+
+  const { data, error } = await supabase
+    .from("profiles")
+    .update({
+      vip: false,
+      date_debut_vip: null,
+      date_fin_vip: null,
+    })
+    .eq("email", emailVip.trim())
+    .select("*");
+
+  if (error) {
+    alert("Erreur désactivation VIP");
+  } else if (!data || data.length === 0) {
+    alert("Aucun utilisateur trouvé avec cet email");
+  } else {
+    alert("VIP désactivé avec succès");
+  }
+
+  setEmailVip("");
+}
 if (loading) {
   return (
     <main className="min-h-screen bg-black flex items-center justify-center">
@@ -293,6 +315,12 @@ if (loading) {
   >
     {loadingVip ? "Activation..." : "Activer VIP"}
   </button>
+  <button
+  onClick={desactiverVip}
+  className="bg-red-600 text-white px-6 py-3 rounded-lg mt-4"
+>
+  Désactiver VIP
+</button>
 </div>
 
 
