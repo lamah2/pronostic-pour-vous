@@ -139,8 +139,12 @@ async function activerVip() {
   .select("*")
   .eq("email", emailVip.trim());
 
-console.log("RECHERCHE =", data);
-console.log("ERREUR RECHERCHE =", error);
+const { data, error } = await supabase
+  .from("profiles")
+  .select("*");
+
+console.log("TOUS LES PROFILS =", data);
+console.log("ERREUR =", error);
     
 
   console.log("EMAIL VIP =", emailVip);
