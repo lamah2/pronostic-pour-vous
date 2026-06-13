@@ -136,13 +136,19 @@ async function activerVip() {
 
   const { data, error } = await supabase
   .from("profiles")
-  .select("*")
-  .eq("email", emailVip.trim());
+  .update({
+    vip: true,
+    date_debut_vip: dateDebut.toISOString(),
+    date_fin_vip: dateFin.toISOString(),
+  })
+  .eq("email", emailVip.trim())
+  .select("*");
 
 
 
-console.log("TOUS LES PROFILS =", data);
-console.log("ERREUR =", error);
+console.log("RESULTAT VIP =", data);
+console.log("ERREUR VIP =", error);
+console.log("NB LIGNES =", data?.length);
     
 
  
