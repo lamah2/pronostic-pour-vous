@@ -146,7 +146,11 @@ async function activerVip() {
   if (error) {
     alert("Erreur activation VIP");
   } else {
-    alert("VIP activé avec succès");
+    if (!data || data.length === 0) {
+  alert("Aucun utilisateur trouvé avec cet email");
+} else {
+  alert("VIP activé avec succès");
+}
     setEmailVip("");
   }
 }
