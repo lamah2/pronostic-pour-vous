@@ -148,11 +148,15 @@ console.log("ERREUR =", error);
     
 
   console.log("EMAIL VIP =", emailVip);
-console.log("RESULTAT VIP =", data);
-console.log("ERREUR VIP =", error);
-console.log("NB LIGNES =", data?.length);
-  setLoadingVip(false);
+const { data, error } = await supabase
+  .from("profiles")
+  .select("*");
 
+console.log("TOUS LES PROFILS =", data);
+console.log("NB PROFILS =", data?.length);
+console.log("ERREUR =", error);
+
+return;
   if (error) {
     alert("Erreur activation VIP");
   } else {
