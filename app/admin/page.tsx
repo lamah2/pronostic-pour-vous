@@ -244,11 +244,13 @@ if (loading) {
    <button
   onClick={sauvegarder}
   className="bg-green-500 px-6 py-3 rounded font-bold"
->
-  Sauvegarder
-  <h2 className="text-2xl font-bold text-green-400 mt-10 mb-4">
-  Gestion VIP
-</h2>
+ >
+   Sauvegarder
+</button>
+
+<h2 className="text-2xl font-bold text-green-400 mt-10 mb-4">
+   Gestion VIP
+ </h2>
 
 <div className="bg-zinc-900 p-6 rounded-2xl space-y-4">
   <input
