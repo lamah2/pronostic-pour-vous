@@ -144,9 +144,10 @@ async function activerVip() {
     .eq("email", emailVip.trim())
     .select("*");
 
-  console.log("RESULTAT VIP =", data);
-  console.log("ERREUR VIP =", error);
-
+  console.log("EMAIL VIP =", emailVip);
+console.log("RESULTAT VIP =", data);
+console.log("ERREUR VIP =", error);
+console.log("NB LIGNES =", data?.length);
   setLoadingVip(false);
 
   if (error) {
