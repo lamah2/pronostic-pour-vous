@@ -132,14 +132,20 @@ async function activerVip() {
   const dateFin = new Date();
   dateFin.setDate(dateFin.getDate() + Number(dureeVip));
 
-  const { error } = await supabase
+  console.log("EMAIL VIP =", emailVip);
+
+  const { data, error } = await supabase
     .from("profiles")
     .update({
       vip: true,
       date_debut_vip: dateDebut.toISOString(),
       date_fin_vip: dateFin.toISOString(),
     })
-    .eq("email", emailVip);
+    .eq("email", emailVip.trim())
+    .select("*");
+
+  console.log("RESULTAT VIP =", data);
+  console.log("ERREUR VIP =", error);
 
   setLoadingVip(false);
 
@@ -147,10 +153,11 @@ async function activerVip() {
     alert("Erreur activation VIP");
   } else {
     if (!data || data.length === 0) {
-  alert("Aucun utilisateur trouvé avec cet email");
-} else {
-  alert("VIP activé avec succès");
-}
+      alert("Aucun utilisateur trouvé avec cet email");
+    } else {
+      alert("VIP activé avec succès");
+    }
+
     setEmailVip("");
   }
 }
