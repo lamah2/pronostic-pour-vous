@@ -4,16 +4,15 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "../supabase";
 
-export default function InscriptionPage() {
+export default function NouveauMotDePassePage() {
   const router = useRouter();
-  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
-  async function inscription() {
-    if (!email || !password || !confirm) {
+  async function mettreAJour() {
+    if (!password || !confirm) {
       alert("⚠️ Veuillez remplir tous les champs");
       return;
     }
@@ -30,7 +29,7 @@ export default function InscriptionPage() {
 
     setLoading(true);
 
-    const { error } = await supabase.auth.signUp({ email, password });
+    const { error } = await supabase.auth.updateUser({ password });
 
     setLoading(false);
 
@@ -39,7 +38,7 @@ export default function InscriptionPage() {
       return;
     }
 
-    alert("✅ Compte créé avec succès !");
+    alert("✅ Mot de passe mis à jour avec succès !");
     router.push("/connexion");
   }
 
@@ -50,7 +49,6 @@ export default function InscriptionPage() {
 
   return (
     <main className="min-h-screen bg-zinc-950 text-white flex items-center justify-center px-6">
-
       <div className="w-full max-w-md">
 
         {/* LOGO */}
@@ -61,31 +59,25 @@ export default function InscriptionPage() {
           >
             🐎 PRONOSTIC POUR VOUS
           </h1>
-          <p className="text-zinc-500 text-sm">Créez votre compte gratuitement</p>
+          <p className="text-zinc-500 text-sm">Créez un nouveau mot de passe</p>
         </div>
 
         {/* CARD */}
         <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-8">
 
-          <h2 className="text-2xl font-bold mb-6">Inscription 📝</h2>
+          <div className="text-center mb-6">
+            <div className="text-5xl mb-3">🔐</div>
+            <h2 className="text-2xl font-bold">Nouveau mot de passe</h2>
+            <p className="text-zinc-500 text-sm mt-2">
+              Choisissez un mot de passe sécurisé.
+            </p>
+          </div>
 
           <div className="space-y-5">
 
-            {/* EMAIL */}
-            <div>
-              <label className="text-zinc-400 text-sm mb-1 block">Email</label>
-              <input
-                type="email"
-                placeholder="votre@email.com"
-                className="w-full p-3 rounded-xl bg-zinc-800 border border-zinc-700 text-white focus:border-green-500 focus:outline-none transition"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-              />
-            </div>
-
             {/* MOT DE PASSE */}
             <div>
-              <label className="text-zinc-400 text-sm mb-1 block">Mot de passe</label>
+              <label className="text-zinc-400 text-sm mb-1 block">Nouveau mot de passe</label>
               <div className="relative">
                 <input
                   type={showPassword ? "text" : "password"}
@@ -103,7 +95,7 @@ export default function InscriptionPage() {
                 </button>
               </div>
 
-              {/* BARRE FORCE MOT DE PASSE */}
+              {/* BARRE FORCE */}
               {password.length > 0 && (
                 <div className="mt-2">
                   <div className="flex gap-1 mb-1">
@@ -121,7 +113,7 @@ export default function InscriptionPage() {
                     ))}
                   </div>
                   <p className="text-xs text-zinc-500">
-                    {force === 1 ? "❌ Mot de passe trop court" : force === 2 ? "⚠️ Moyen" : "✅ Fort"}
+                    {force === 1 ? "❌ Trop court" : force === 2 ? "⚠️ Moyen" : "✅ Fort"}
                   </p>
                 </div>
               )}
@@ -151,44 +143,22 @@ export default function InscriptionPage() {
               )}
             </div>
 
-            {/* BOUTON */}
             <button
-              type="button"
-              onClick={inscription}
+              onClick={mettreAJour}
               disabled={loading}
               className="w-full bg-green-500 hover:bg-green-600 py-4 rounded-xl font-bold text-lg transition disabled:opacity-50"
             >
-              {loading ? "Création en cours..." : "Créer mon compte 🚀"}
+              {loading ? "Mise à jour..." : "✅ Mettre à jour le mot de passe"}
             </button>
 
           </div>
-
-          {/* SÉPARATEUR */}
-          <div className="flex items-center gap-4 my-6">
-            <div className="flex-1 border-t border-zinc-700" />
-            <span className="text-zinc-600 text-sm">ou</span>
-            <div className="flex-1 border-t border-zinc-700" />
-          </div>
-
-          {/* LIEN CONNEXION */}
-          <p className="text-center text-zinc-400 text-sm">
-            Déjà un compte ?{" "}
-            <span
-              onClick={() => router.push("/connexion")}
-              className="text-green-400 font-semibold cursor-pointer hover:underline"
-            >
-              Se connecter
-            </span>
-          </p>
-
         </div>
 
-        {/* RETOUR */}
         <p
           className="text-center text-zinc-600 text-sm mt-6 cursor-pointer hover:text-zinc-400 transition"
-          onClick={() => router.push("/")}
+          onClick={() => router.push("/connexion")}
         >
-          ← Retour à l'accueil
+          ← Retour à la connexion
         </p>
 
       </div>
