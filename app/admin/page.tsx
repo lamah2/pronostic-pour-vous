@@ -7,7 +7,7 @@ import { supabase } from "../supabase";
 export default function AdminPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<"predictions" | "vip" | "paiements" | "statistiques" | "membres" | "vip_pronostics">("predictions");
+  const [activeTab, setActiveTab] = useState<"predictions" | "vip" | "paiements" | "statistiques" | "membres" | "vip_pronostics" | "historique">("predictions");
   const [reunion, setReunion] = useState("");
   const [course, setCourse] = useState("");
   const [hippodrome, setHippodrome] = useState("");
@@ -25,6 +25,7 @@ export default function AdminPage() {
 
   const [paiements, setPaiements] = useState<any[]>([]);
   const [membresVip, setMembresVip] = useState<any[]>([]);
+  const [historique, setHistorique] = useState<any[]>([]);
   const [stats, setStats] = useState({
     total: 0,
     pending: 0,
@@ -36,9 +37,10 @@ export default function AdminPage() {
     vipActifs: 0,
     vipExpires: 0,
   });
-const [coupleVip, setCoupleVip] = useState("");
-const [selectionVip, setSelectionVip] = useState("");
-const [arriveeVip, setArriveeVip] = useState("");
+  const [coupleVip, setCoupleVip] = useState("");
+  const [selectionVip, setSelectionVip] = useState("");
+  const [arriveeVip, setArriveeVip] = useState("");
+
   useEffect(() => { verifierAdmin(); }, []);
 
   async function verifierAdmin() {
@@ -58,20 +60,32 @@ const [arriveeVip, setArriveeVip] = useState("");
     await chargerPrediction();
     await chargerMembresVip();
     await chargerVipPronostics();
+    await chargerHistorique();
     setLoading(false);
   }
-async function chargerVipPronostics() {
-  const { data } = await supabase
-    .from("vip_pronostics")
-    .select("*")
-    .single();
 
-  if (data) {
-    setCoupleVip(data.couple_vip || "");
-    setSelectionVip(data.selection_vip || "");
-    setArriveeVip(data.arrivee || "");
+  // ✅ NOUVELLE FONCTION : charger l'historique
+  async function chargerHistorique() {
+    const { data } = await supabase
+      .from("historique_predictions")
+      .select("*")
+      .order("created_at", { ascending: false });
+    if (data) setHistorique(data);
   }
-}
+
+  async function chargerVipPronostics() {
+    const { data } = await supabase
+      .from("vip_pronostics")
+      .select("*")
+      .single();
+
+    if (data) {
+      setCoupleVip(data.couple_vip || "");
+      setSelectionVip(data.selection_vip || "");
+      setArriveeVip(data.arrivee || "");
+    }
+  }
+
   async function chargerPrediction() {
     const { data } = await supabase.from("predictions").select("*").limit(1).single();
     if (data) {
@@ -96,7 +110,6 @@ async function chargerVipPronostics() {
 
     if (data) {
       setPaiements(data);
-
       const completed = data.filter((p: any) => p.status === "Completed");
       const now = new Date();
       const debutSemaine = new Date(now);
@@ -138,7 +151,9 @@ async function chargerVipPronostics() {
       }));
     }
   }
-async function sauvegarderVip() {
+
+ async function sauvegarderVip() {
+  // 1. Mettre à jour le pronostic VIP du jour
   const { error } = await supabase
     .from("vip_pronostics")
     .update({
@@ -150,47 +165,77 @@ async function sauvegarderVip() {
 
   if (error) {
     alert("❌ Erreur : " + error.message);
-  } else {
-    alert("✅ Pronostics VIP sauvegardés !");
+    return;
   }
 
+  // 2. ✅ Enregistrer dans l'historique VIP
+  await supabase.from("vip_pronostics_historique").insert({
+    couple_vip: coupleVip,
+    selection_vip: selectionVip,
+    arrivee: arriveeVip,
+  });
 
-  alert("✅ Pronostics VIP sauvegardés !");
+  alert("✅ Pronostics VIP sauvegardés et ajoutés à l'historique !");
 }
+
+  // ✅ MODIFIÉE : sauvegarde ET enregistre dans l'historique
   async function sauvegarder() {
+    // 1. Mettre à jour la prédiction du jour
     const { error } = await supabase.from("predictions").update({
       reunion, course, hippodrome, distance,
       bases: base1, belles_chances: belle1, outsiders: outsider1,
       gros_rapports: grosRapport, ticket, analysis,
     }).eq("id", "a23e82ea-7ce4-4e28-ba74-22bb25a780e0");
-    if (error) alert("❌ Erreur");
-    else alert("✅ Sauvegarde réussie !");
+
+    if (error) {
+      alert("❌ Erreur lors de la sauvegarde");
+      return;
+    }
+
+    // 2. ✅ Enregistrer dans l'historique automatiquement
+    const { error: errHisto } = await supabase.from("historique_predictions").insert({
+      reunion, course, hippodrome, distance,
+      bases: base1, belles_chances: belle1, outsiders: outsider1,
+      gros_rapports: grosRapport, ticket, analysis,
+    });
+
+    if (errHisto) {
+      console.error("Erreur historique:", errHisto.message);
+    }
+
+    alert("✅ Sauvegarde réussie et ajoutée à l'historique !");
+    await chargerHistorique();
   }
 
- async function validerPaiement(p: any) {
-  await supabase.from("payments").update({ status: "Completed" }).eq("id", p.id);
-  
-  const debut = new Date();
-  const fin = new Date();
-  fin.setDate(fin.getDate() + (p.plan === "weekly" ? 7 : 30));
-  
-  await supabase.from("profiles").update({
-    vip: true,
-    date_debut_vip: debut.toISOString(),
-    date_fin_vip: fin.toISOString(),
-  }).eq("email", p.email);
+  async function supprimerHistorique(id: string) {
+    if (!confirm("Supprimer cet enregistrement ?")) return;
+    await supabase.from("historique_predictions").delete().eq("id", id);
+    await chargerHistorique();
+  }
 
-  // ✅ Notification pour l'utilisateur
-  await supabase.from("notifications").insert({
-    user_email: p.email,
-    message: `🎉 Votre abonnement VIP ${p.plan === "weekly" ? "hebdomadaire" : "mensuel"} a été activé ! Vous avez accès à tous les pronostics exclusifs.`,
-    lu: false,
-  });
+  async function validerPaiement(p: any) {
+    await supabase.from("payments").update({ status: "Completed" }).eq("id", p.id);
 
-  alert("✅ VIP activé pour " + p.nom);
-  chargerPaiements();
-  chargerMembresVip();
-}
+    const debut = new Date();
+    const fin = new Date();
+    fin.setDate(fin.getDate() + (p.plan === "weekly" ? 7 : 30));
+
+    await supabase.from("profiles").update({
+      vip: true,
+      date_debut_vip: debut.toISOString(),
+      date_fin_vip: fin.toISOString(),
+    }).eq("email", p.email);
+
+    await supabase.from("notifications").insert({
+      user_email: p.email,
+      message: `🎉 Votre abonnement VIP ${p.plan === "weekly" ? "hebdomadaire" : "mensuel"} a été activé ! Vous avez accès à tous les pronostics exclusifs.`,
+      lu: false,
+    });
+
+    alert("✅ VIP activé pour " + p.nom);
+    chargerPaiements();
+    chargerMembresVip();
+  }
 
   async function activerVip() {
     setLoadingVip(true);
@@ -235,6 +280,14 @@ async function sauvegarderVip() {
     });
   }
 
+  function formatDateHeure(dateStr: string) {
+    if (!dateStr) return "—";
+    return new Date(dateStr).toLocaleDateString("fr-FR", {
+      day: "2-digit", month: "short", year: "numeric",
+      hour: "2-digit", minute: "2-digit"
+    });
+  }
+
   function joursRestants(dateStr: string) {
     if (!dateStr) return 0;
     const fin = new Date(dateStr);
@@ -246,21 +299,10 @@ async function sauvegarderVip() {
     await supabase.auth.signOut();
     router.push("/connexion");
   }
-const hippodromes = [
-  { nom: "Vincennes", distance: "2700" },
-  { nom: "Longchamp", distance: "2400" },
-  { nom: "Chantilly", distance: "1600" },
-  { nom: "Auteuil", distance: "3200" },
-  { nom: "Saint-Cloud", distance: "2000" },
-  { nom: "Deauville", distance: "1800" },
-  { nom: "Compiègne", distance: "1600" },
-  { nom: "Lyon-Parilly", distance: "1700" },
-  { nom: "Marseille-Borély", distance: "1600" },
-  { nom: "Cagnes-sur-Mer", distance: "1600" },
-];
 
-const reunions = ["R1", "R2", "R3", "R4", "R5", "R6", "R7"];
-const courses = ["C1", "C2", "C3", "C4", "C5", "C6", "C7", "C8", "C9", "C10"];
+  const reunions = ["R1", "R2", "R3", "R4", "R5", "R6", "R7"];
+  const courses = ["C1", "C2", "C3", "C4", "C5", "C6", "C7", "C8", "C9", "C10"];
+
   if (loading) return (
     <main className="min-h-screen bg-black flex items-center justify-center">
       <div className="text-center">
@@ -275,21 +317,21 @@ const courses = ["C1", "C2", "C3", "C4", "C5", "C6", "C7", "C8", "C9", "C10"];
       <div className="flex min-h-screen">
 
         {/* SIDEBAR */}
-        <aside className="w-64 bg-zinc-900 border-r border-zinc-800 flex flex-col p-6 fixed h-full">
+        <aside className="w-64 bg-zinc-900 border-r border-zinc-800 flex flex-col p-6 fixed h-full overflow-y-auto">
           <div className="mb-10">
             <h1 className="text-2xl font-extrabold text-green-400">🐎 PMU Admin</h1>
             <p className="text-zinc-500 text-sm mt-1">Tableau de bord</p>
           </div>
-           <DateDuJour />
+          <DateDuJour />
           <nav className="flex flex-col gap-2 flex-1">
             {[
               { id: "statistiques", icon: "📈", label: "Statistiques" },
               { id: "predictions", icon: "📊", label: "Pronostics" },
+              { id: "historique", icon: "🕘", label: "Historique" },
               { id: "paiements", icon: "💰", label: "Paiements" },
-              { id: "membres", icon: "👑", label: "Membres VIP" 
-              },
-              { id: "vip_pronostics", icon: "👑", label: "Pronostics VIP" },
-              { id: "vip", icon: "⭐", label: "Gestion VIP" },
+              { id: "membres", icon: "👑", label: "Membres VIP" },
+              { id: "vip_pronostics", icon: "⭐", label: "Pronostics VIP" },
+              { id: "vip", icon: "🔧", label: "Gestion VIP" },
             ].map((tab) => (
               <button
                 key={tab.id}
@@ -312,6 +354,11 @@ const courses = ["C1", "C2", "C3", "C4", "C5", "C6", "C7", "C8", "C9", "C10"];
                     {stats.vipExpires}
                   </span>
                 )}
+                {tab.id === "historique" && historique.length > 0 && (
+                  <span className="ml-auto bg-blue-600 text-white text-xs font-bold px-2 py-0.5 rounded-full">
+                    {historique.length}
+                  </span>
+                )}
               </button>
             ))}
           </nav>
@@ -331,34 +378,24 @@ const courses = ["C1", "C2", "C3", "C4", "C5", "C6", "C7", "C8", "C9", "C10"];
           {activeTab === "statistiques" && (
             <div>
               <h2 className="text-3xl font-bold text-green-400 mb-8">📈 Statistiques</h2>
-
-              {/* REVENUS */}
               <h3 className="text-lg font-bold text-zinc-400 uppercase tracking-wide mb-4">💰 Revenus</h3>
               <div className="grid grid-cols-3 gap-6 mb-10">
                 <div className="bg-zinc-900 border border-green-800 rounded-2xl p-6 text-center">
                   <p className="text-zinc-500 text-sm mb-2">Cette semaine</p>
-                  <p className="text-3xl font-extrabold text-green-400">
-                    {stats.revenuSemaine.toLocaleString()}
-                  </p>
+                  <p className="text-3xl font-extrabold text-green-400">{stats.revenuSemaine.toLocaleString()}</p>
                   <p className="text-zinc-600 text-sm mt-1">GNF</p>
                 </div>
                 <div className="bg-zinc-900 border border-blue-800 rounded-2xl p-6 text-center">
                   <p className="text-zinc-500 text-sm mb-2">Ce mois</p>
-                  <p className="text-3xl font-extrabold text-blue-400">
-                    {stats.revenuMois.toLocaleString()}
-                  </p>
+                  <p className="text-3xl font-extrabold text-blue-400">{stats.revenuMois.toLocaleString()}</p>
                   <p className="text-zinc-600 text-sm mt-1">GNF</p>
                 </div>
                 <div className="bg-zinc-900 border border-yellow-800 rounded-2xl p-6 text-center">
                   <p className="text-zinc-500 text-sm mb-2">Total général</p>
-                  <p className="text-3xl font-extrabold text-yellow-400">
-                    {stats.revenuTotal.toLocaleString()}
-                  </p>
+                  <p className="text-3xl font-extrabold text-yellow-400">{stats.revenuTotal.toLocaleString()}</p>
                   <p className="text-zinc-600 text-sm mt-1">GNF</p>
                 </div>
               </div>
-
-              {/* PAIEMENTS */}
               <h3 className="text-lg font-bold text-zinc-400 uppercase tracking-wide mb-4">💳 Paiements</h3>
               <div className="grid grid-cols-3 gap-6 mb-10">
                 <div className="bg-zinc-900 border border-zinc-700 rounded-2xl p-6 text-center">
@@ -374,8 +411,6 @@ const courses = ["C1", "C2", "C3", "C4", "C5", "C6", "C7", "C8", "C9", "C10"];
                   <p className="text-zinc-500 mt-1">Validés</p>
                 </div>
               </div>
-
-              {/* MEMBRES VIP */}
               <h3 className="text-lg font-bold text-zinc-400 uppercase tracking-wide mb-4">👑 Membres VIP</h3>
               <div className="grid grid-cols-3 gap-6">
                 <div className="bg-zinc-900 border border-zinc-700 rounded-2xl p-6 text-center">
@@ -400,137 +435,150 @@ const courses = ["C1", "C2", "C3", "C4", "C5", "C6", "C7", "C8", "C9", "C10"];
               <h2 className="text-3xl font-bold text-green-400 mb-6">📊 Pronostics du jour</h2>
               <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-8 space-y-4">
                 <div className="grid grid-cols-2 gap-4">
-
-  {/* RÉUNION */}
-  <div>
-    <label className="text-zinc-400 text-sm mb-1 block">Réunion</label>
-    <select
-      className="w-full p-3 rounded-xl bg-zinc-800 border border-zinc-700 text-white focus:border-green-500 focus:outline-none transition"
-      value={reunion}
-      onChange={(e) => setReunion(e.target.value)}
-    >
-      <option value="">-- Choisir --</option>
-      {reunions.map((r) => (
-        <option key={r} value={r}>{r}</option>
-      ))}
-    </select>
-  </div>
-
-  {/* COURSE */}
-  <div>
-    <label className="text-zinc-400 text-sm mb-1 block">Course</label>
-    <select
-      className="w-full p-3 rounded-xl bg-zinc-800 border border-zinc-700 text-white focus:border-green-500 focus:outline-none transition"
-      value={course}
-      onChange={(e) => setCourse(e.target.value)}
-    >
-      <option value="">-- Choisir --</option>
-      {courses.map((c) => (
-        <option key={c} value={c}>{c}</option>
-      ))}
-    </select>
-  </div>
-
- {/* HIPPODROME */}
-<div>
-  <label className="text-zinc-400 text-sm mb-1 block">Hippodrome</label>
-  <input
-    className="w-full p-3 rounded-xl bg-zinc-800 border border-zinc-700 text-white focus:border-green-500 focus:outline-none transition"
-    placeholder="Ex: Enghien Soisy"
-    value={hippodrome}
-    onChange={(e) => setHippodrome(e.target.value)}
-  />
-</div>
-
-{/* DISTANCE */}
-<div>
-  <label className="text-zinc-400 text-sm mb-1 block">Distance (m)</label>
-  <input
-    className="w-full p-3 rounded-xl bg-zinc-800 border border-zinc-700 text-white focus:border-green-500 focus:outline-none transition"
-    placeholder="Ex: 1800"
-    value={distance}
-    onChange={(e) => setDistance(e.target.value)}
-  />
-</div>
-
-  {/* BASE */}
-  <div>
-    <label className="text-zinc-400 text-sm mb-1 block">Base</label>
-    <input
-      className="w-full p-3 rounded-xl bg-zinc-800 border border-zinc-700 text-white focus:border-green-500 focus:outline-none transition"
-      value={base1}
-      onChange={(e) => setBase1(e.target.value)}
-      placeholder="Ex: JAGUAR DU RIB"
-    />
-  </div>
-
-  {/* BELLE CHANCE */}
-  <div>
-    <label className="text-zinc-400 text-sm mb-1 block">Belle chance</label>
-    <input
-      className="w-full p-3 rounded-xl bg-zinc-800 border border-zinc-700 text-white focus:border-green-500 focus:outline-none transition"
-      value={belle1}
-      onChange={(e) => setBelle1(e.target.value)}
-      placeholder="Ex: IBIS PETTEVINIERE"
-    />
-  </div>
-
-  {/* OUTSIDER */}
-  <div>
-    <label className="text-zinc-400 text-sm mb-1 block">Outsider</label>
-    <input
-      className="w-full p-3 rounded-xl bg-zinc-800 border border-zinc-700 text-white focus:border-green-500 focus:outline-none transition"
-      value={outsider1}
-      onChange={(e) => setOutsider1(e.target.value)}
-      placeholder="Ex: HIRONDELLE FEE"
-    />
-  </div>
-
-  {/* GROS RAPPORT */}
-  <div>
-    <label className="text-zinc-400 text-sm mb-1 block">Gros rapport</label>
-    <input
-      className="w-full p-3 rounded-xl bg-zinc-800 border border-zinc-700 text-white focus:border-green-500 focus:outline-none transition"
-      value={grosRapport}
-      onChange={(e) => setGrosRapport(e.target.value)}
-      placeholder="Ex: CHEVAL SURPRISE"
-    />
-  </div>
-
-  {/* TICKET */}
-  <div className="col-span-2">
-    <label className="text-zinc-400 text-sm mb-1 block">Ticket</label>
-    <input
-      className="w-full p-3 rounded-xl bg-zinc-800 border border-zinc-700 text-white focus:border-green-500 focus:outline-none transition"
-      value={ticket}
-      onChange={(e) => setTicket(e.target.value)}
-      placeholder="Ex: 4-7-9"
-    />
-  </div>
-
-</div>
-
-{/* ANALYSE */}
-<div>
-  <label className="text-zinc-400 text-sm mb-1 block">Analyse</label>
-  <textarea
-    rows={5}
-    className="w-full p-3 rounded-xl bg-zinc-800 border border-zinc-700 text-white focus:border-green-500 focus:outline-none transition"
-    value={analysis}
-    onChange={(e) => setAnalysis(e.target.value)}
-    placeholder="Votre analyse complète..."
-  />
-</div>
-
-<button
-  onClick={sauvegarder}
-  className="bg-green-600 hover:bg-green-700 px-8 py-3 rounded-xl font-bold text-lg transition"
->
-  💾 Sauvegarder
-</button>
+                  <div>
+                    <label className="text-zinc-400 text-sm mb-1 block">Réunion</label>
+                    <select className="w-full p-3 rounded-xl bg-zinc-800 border border-zinc-700 text-white focus:border-green-500 focus:outline-none transition" value={reunion} onChange={(e) => setReunion(e.target.value)}>
+                      <option value="">-- Choisir --</option>
+                      {reunions.map((r) => <option key={r} value={r}>{r}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-zinc-400 text-sm mb-1 block">Course</label>
+                    <select className="w-full p-3 rounded-xl bg-zinc-800 border border-zinc-700 text-white focus:border-green-500 focus:outline-none transition" value={course} onChange={(e) => setCourse(e.target.value)}>
+                      <option value="">-- Choisir --</option>
+                      {courses.map((c) => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-zinc-400 text-sm mb-1 block">Hippodrome</label>
+                    <input className="w-full p-3 rounded-xl bg-zinc-800 border border-zinc-700 text-white focus:border-green-500 focus:outline-none transition" placeholder="Ex: Enghien Soisy" value={hippodrome} onChange={(e) => setHippodrome(e.target.value)} />
+                  </div>
+                  <div>
+                    <label className="text-zinc-400 text-sm mb-1 block">Distance (m)</label>
+                    <input className="w-full p-3 rounded-xl bg-zinc-800 border border-zinc-700 text-white focus:border-green-500 focus:outline-none transition" placeholder="Ex: 1800" value={distance} onChange={(e) => setDistance(e.target.value)} />
+                  </div>
+                  <div>
+                    <label className="text-zinc-400 text-sm mb-1 block">Base</label>
+                    <input className="w-full p-3 rounded-xl bg-zinc-800 border border-zinc-700 text-white focus:border-green-500 focus:outline-none transition" value={base1} onChange={(e) => setBase1(e.target.value)} placeholder="Ex: JAGUAR DU RIB" />
+                  </div>
+                  <div>
+                    <label className="text-zinc-400 text-sm mb-1 block">Belle chance</label>
+                    <input className="w-full p-3 rounded-xl bg-zinc-800 border border-zinc-700 text-white focus:border-green-500 focus:outline-none transition" value={belle1} onChange={(e) => setBelle1(e.target.value)} placeholder="Ex: IBIS PETTEVINIERE" />
+                  </div>
+                  <div>
+                    <label className="text-zinc-400 text-sm mb-1 block">Outsider</label>
+                    <input className="w-full p-3 rounded-xl bg-zinc-800 border border-zinc-700 text-white focus:border-green-500 focus:outline-none transition" value={outsider1} onChange={(e) => setOutsider1(e.target.value)} placeholder="Ex: HIRONDELLE FEE" />
+                  </div>
+                  <div>
+                    <label className="text-zinc-400 text-sm mb-1 block">Gros rapport</label>
+                    <input className="w-full p-3 rounded-xl bg-zinc-800 border border-zinc-700 text-white focus:border-green-500 focus:outline-none transition" value={grosRapport} onChange={(e) => setGrosRapport(e.target.value)} placeholder="Ex: CHEVAL SURPRISE" />
+                  </div>
+                  <div className="col-span-2">
+                    <label className="text-zinc-400 text-sm mb-1 block">Ticket</label>
+                    <input className="w-full p-3 rounded-xl bg-zinc-800 border border-zinc-700 text-white focus:border-green-500 focus:outline-none transition" value={ticket} onChange={(e) => setTicket(e.target.value)} placeholder="Ex: 4-7-9" />
+                  </div>
+                </div>
+                <div>
+                  <label className="text-zinc-400 text-sm mb-1 block">Analyse</label>
+                  <textarea rows={5} className="w-full p-3 rounded-xl bg-zinc-800 border border-zinc-700 text-white focus:border-green-500 focus:outline-none transition" value={analysis} onChange={(e) => setAnalysis(e.target.value)} placeholder="Votre analyse complète..." />
+                </div>
+                <button onClick={sauvegarder} className="bg-green-600 hover:bg-green-700 px-8 py-3 rounded-xl font-bold text-lg transition">
+                  💾 Sauvegarder
+                </button>
+              </div>
             </div>
-          </div>
-        )}
+          )}
+
+          {/* ✅ ONGLET HISTORIQUE */}
+          {activeTab === "historique" && (
+            <div>
+              <h2 className="text-3xl font-bold text-blue-400 mb-2">🕘 Historique des pronostics</h2>
+              <p className="text-zinc-500 mb-6 text-sm">Tous les pronostics sauvegardés depuis le début</p>
+
+              {historique.length === 0 ? (
+                <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-16 text-center text-zinc-500">
+                  <p className="text-4xl mb-4">📭</p>
+                  <p>Aucun historique pour le moment.</p>
+                  <p className="text-sm mt-2">Les pronostics apparaîtront ici après chaque sauvegarde.</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {historique.map((h) => (
+                    <div key={h.id} className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6">
+                      {/* En-tête */}
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-3">
+                          <span className="bg-blue-900 text-blue-300 text-xs font-bold px-3 py-1 rounded-full">
+                            📅 {formatDateHeure(h.created_at)}
+                          </span>
+                          {h.reunion && (
+                            <span className="bg-zinc-800 text-zinc-300 text-xs font-bold px-3 py-1 rounded-full">
+                              {h.reunion} • {h.course}
+                            </span>
+                          )}
+                          {h.hippodrome && (
+                            <span className="bg-zinc-800 text-zinc-300 text-xs font-bold px-3 py-1 rounded-full">
+                              🏟 {h.hippodrome} {h.distance && `• ${h.distance}m`}
+                            </span>
+                          )}
+                        </div>
+                        <button
+                          onClick={() => supprimerHistorique(h.id)}
+                          className="text-red-400 hover:text-red-300 text-sm px-3 py-1 rounded-lg hover:bg-red-900/30 transition"
+                        >
+                          🗑 Supprimer
+                        </button>
+                      </div>
+
+                      {/* Pronostics */}
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+                        {h.bases && (
+                          <div className="bg-green-900/30 border border-green-800 rounded-xl p-3">
+                            <p className="text-green-400 text-xs font-bold mb-1">🎯 Base</p>
+                            <p className="text-white text-sm font-semibold">{h.bases}</p>
+                          </div>
+                        )}
+                        {h.belles_chances && (
+                          <div className="bg-blue-900/30 border border-blue-800 rounded-xl p-3">
+                            <p className="text-blue-400 text-xs font-bold mb-1">💙 Belle chance</p>
+                            <p className="text-white text-sm font-semibold">{h.belles_chances}</p>
+                          </div>
+                        )}
+                        {h.outsiders && (
+                          <div className="bg-orange-900/30 border border-orange-800 rounded-xl p-3">
+                            <p className="text-orange-400 text-xs font-bold mb-1">🔥 Outsider</p>
+                            <p className="text-white text-sm font-semibold">{h.outsiders}</p>
+                          </div>
+                        )}
+                        {h.gros_rapports && (
+                          <div className="bg-purple-900/30 border border-purple-800 rounded-xl p-3">
+                            <p className="text-purple-400 text-xs font-bold mb-1">💜 Gros rapport</p>
+                            <p className="text-white text-sm font-semibold">{h.gros_rapports}</p>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Ticket */}
+                      {h.ticket && (
+                        <div className="bg-yellow-900/20 border border-yellow-800 rounded-xl p-3 mb-4">
+                          <p className="text-yellow-400 text-xs font-bold mb-1">🎫 Ticket</p>
+                          <p className="text-white font-bold tracking-wider">{h.ticket}</p>
+                        </div>
+                      )}
+
+                      {/* Analyse */}
+                      {h.analysis && (
+                        <div className="bg-zinc-800/50 rounded-xl p-3">
+                          <p className="text-zinc-400 text-xs font-bold mb-1">📝 Analyse</p>
+                          <p className="text-zinc-300 text-sm leading-relaxed">{h.analysis}</p>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* ONGLET PAIEMENTS */}
           {activeTab === "paiements" && (
@@ -555,29 +603,20 @@ const courses = ["C1", "C2", "C3", "C4", "C5", "C6", "C7", "C8", "C9", "C10"];
                         <td className="px-5 py-4 font-semibold">{p.nom}</td>
                         <td className="px-5 py-4 text-zinc-400 text-xs">{p.email}</td>
                         <td className="px-5 py-4">
-                          <span className={`px-2 py-1 rounded-full text-xs font-bold ${
-                            p.plan === "weekly" ? "bg-blue-900 text-blue-300" : "bg-purple-900 text-purple-300"
-                          }`}>
+                          <span className={`px-2 py-1 rounded-full text-xs font-bold ${p.plan === "weekly" ? "bg-blue-900 text-blue-300" : "bg-purple-900 text-purple-300"}`}>
                             {p.plan === "weekly" ? "Hebdo" : "Mensuel"}
                           </span>
                         </td>
                         <td className="px-5 py-4 text-zinc-400 font-mono text-xs">{p.transaction_ref}</td>
                         <td className="px-5 py-4 text-yellow-400 font-bold">{p.amount?.toLocaleString()} GNF</td>
                         <td className="px-5 py-4">
-                          <span className={`px-2 py-1 rounded-full text-xs font-bold ${
-                            p.status === "Completed"
-                              ? "bg-green-900 text-green-300"
-                              : "bg-yellow-900 text-yellow-300"
-                          }`}>
+                          <span className={`px-2 py-1 rounded-full text-xs font-bold ${p.status === "Completed" ? "bg-green-900 text-green-300" : "bg-yellow-900 text-yellow-300"}`}>
                             {p.status === "Completed" ? "✅ Validé" : "⏳ En attente"}
                           </span>
                         </td>
                         <td className="px-5 py-4">
                           {p.status === "Pending" && (
-                            <button
-                              onClick={() => validerPaiement(p)}
-                              className="bg-green-600 hover:bg-green-700 px-4 py-1.5 rounded-lg text-sm font-bold transition"
-                            >
+                            <button onClick={() => validerPaiement(p)} className="bg-green-600 hover:bg-green-700 px-4 py-1.5 rounded-lg text-sm font-bold transition">
                               Valider
                             </button>
                           )}
@@ -619,26 +658,17 @@ const courses = ["C1", "C2", "C3", "C4", "C5", "C6", "C7", "C8", "C9", "C10"];
                           <td className="px-5 py-4 text-zinc-400">{formatDate(m.date_debut_vip)}</td>
                           <td className="px-5 py-4 text-zinc-400">{formatDate(m.date_fin_vip)}</td>
                           <td className="px-5 py-4">
-                            <span className={`font-bold ${
-                              jours <= 0 ? "text-red-400"
-                              : jours <= 3 ? "text-orange-400"
-                              : "text-green-400"
-                            }`}>
+                            <span className={`font-bold ${jours <= 0 ? "text-red-400" : jours <= 3 ? "text-orange-400" : "text-green-400"}`}>
                               {jours <= 0 ? "Expiré" : `${jours} jour${jours > 1 ? "s" : ""}`}
                             </span>
                           </td>
                           <td className="px-5 py-4">
-                            <span className={`px-2 py-1 rounded-full text-xs font-bold ${
-                              actif ? "bg-green-900 text-green-300" : "bg-red-900 text-red-300"
-                            }`}>
+                            <span className={`px-2 py-1 rounded-full text-xs font-bold ${actif ? "bg-green-900 text-green-300" : "bg-red-900 text-red-300"}`}>
                               {actif ? "✅ Actif" : "❌ Expiré"}
                             </span>
                           </td>
                           <td className="px-5 py-4">
-                            <button
-                              onClick={() => desactiverMembreVip(m.email)}
-                              className="bg-red-700 hover:bg-red-800 px-3 py-1.5 rounded-lg text-xs font-bold transition"
-                            >
+                            <button onClick={() => desactiverMembreVip(m.email)} className="bg-red-700 hover:bg-red-800 px-3 py-1.5 rounded-lg text-xs font-bold transition">
                               Désactiver
                             </button>
                           </td>
@@ -653,82 +683,43 @@ const courses = ["C1", "C2", "C3", "C4", "C5", "C6", "C7", "C8", "C9", "C10"];
               </div>
             </div>
           )}
-{/* ONGLET PRONOSTICS VIP */}
-{activeTab === "vip_pronostics" && (
-  <div>
-    <h2 className="text-3xl font-bold text-yellow-400 mb-6">
-      👑 Pronostics VIP du jour
-    </h2>
 
-    <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-8 space-y-6 max-w-xl">
+          {/* ONGLET PRONOSTICS VIP */}
+          {activeTab === "vip_pronostics" && (
+            <div>
+              <h2 className="text-3xl font-bold text-yellow-400 mb-6">👑 Pronostics VIP du jour</h2>
+              <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-8 space-y-6 max-w-xl">
+                <div>
+                  <label className="text-zinc-400 text-sm mb-1 block">💛 Couplé VIP</label>
+                  <input className="w-full p-3 rounded-xl bg-zinc-800 border border-zinc-700 text-white focus:border-yellow-500 focus:outline-none transition" placeholder="Ex: 3-7" value={coupleVip} onChange={(e) => setCoupleVip(e.target.value)} />
+                </div>
+                <div>
+                  <label className="text-zinc-400 text-sm mb-1 block">🎯 Sélection Tiercé Quarté Quinté (6)</label>
+                  <input className="w-full p-3 rounded-xl bg-zinc-800 border border-zinc-700 text-white focus:border-yellow-500 focus:outline-none transition" placeholder="Ex: 3-7-12-1-13-11" value={selectionVip} onChange={(e) => setSelectionVip(e.target.value)} />
+                </div>
+                <div>
+                  <label className="text-zinc-400 text-sm mb-1 block">🏆 Arrivée</label>
+                  <input className="w-full p-3 rounded-xl bg-zinc-800 border border-zinc-700 text-white focus:border-yellow-500 focus:outline-none transition" placeholder="Ex: 3-7-12-1-13" value={arriveeVip} onChange={(e) => setArriveeVip(e.target.value)} />
+                </div>
+                <button onClick={sauvegarderVip} className="w-full bg-yellow-500 hover:bg-yellow-400 text-black py-3 rounded-xl font-bold text-lg transition">
+                  💾 Sauvegarder les pronostics VIP
+                </button>
+              </div>
+            </div>
+          )}
 
-      <div>
-        <label className="text-zinc-400 text-sm mb-1 block">
-          💛 Couplé VIP
-        </label>
-        <input
-          className="w-full p-3 rounded-xl bg-zinc-800 border border-zinc-700 text-white focus:border-yellow-500 focus:outline-none transition"
-          placeholder="Ex: 3-7"
-          value={coupleVip}
-          onChange={(e) => setCoupleVip(e.target.value)}
-        />
-      </div>
-
-      <div>
-        <label className="text-zinc-400 text-sm mb-1 block">
-          🎯 Sélection Tiercé Quarté Quinté (6)
-        </label>
-        <input
-          className="w-full p-3 rounded-xl bg-zinc-800 border border-zinc-700 text-white focus:border-yellow-500 focus:outline-none transition"
-          placeholder="Ex: 3-7-12-1-13-11"
-          value={selectionVip}
-          onChange={(e) => setSelectionVip(e.target.value)}
-        />
-      </div>
-
-      <div>
-        <label className="text-zinc-400 text-sm mb-1 block">
-          🏆 Arrivée
-        </label>
-        <input
-          className="w-full p-3 rounded-xl bg-zinc-800 border border-zinc-700 text-white focus:border-yellow-500 focus:outline-none transition"
-          placeholder="Ex: 3-7-12-1-13"
-          value={arriveeVip}
-          onChange={(e) => setArriveeVip(e.target.value)}
-        />
-      </div>
-
-      <button
-        onClick={sauvegarderVip}
-        className="w-full bg-yellow-500 hover:bg-yellow-400 text-black py-3 rounded-xl font-bold text-lg transition"
-      >
-        💾 Sauvegarder les pronostics VIP
-      </button>
-    </div>
-  </div>
-)}
           {/* ONGLET GESTION VIP */}
           {activeTab === "vip" && (
             <div>
-              <h2 className="text-3xl font-bold text-green-400 mb-6">⭐ Gestion VIP</h2>
+              <h2 className="text-3xl font-bold text-green-400 mb-6">🔧 Gestion VIP</h2>
               <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-8 space-y-6 max-w-lg">
                 <div>
                   <label className="text-zinc-400 text-sm mb-1 block">Email utilisateur</label>
-                  <input
-                    type="email"
-                    placeholder="user@email.com"
-                    value={emailVip}
-                    onChange={(e) => setEmailVip(e.target.value)}
-                    className="w-full p-3 rounded-xl bg-zinc-800 border border-zinc-700 text-white focus:border-green-500 focus:outline-none transition"
-                  />
+                  <input type="email" placeholder="user@email.com" value={emailVip} onChange={(e) => setEmailVip(e.target.value)} className="w-full p-3 rounded-xl bg-zinc-800 border border-zinc-700 text-white focus:border-green-500 focus:outline-none transition" />
                 </div>
                 <div>
                   <label className="text-zinc-400 text-sm mb-1 block">Durée VIP</label>
-                  <select
-                    value={dureeVip}
-                    onChange={(e) => setDureeVip(Number(e.target.value))}
-                    className="w-full p-3 rounded-xl bg-zinc-800 border border-zinc-700 text-white"
-                  >
+                  <select value={dureeVip} onChange={(e) => setDureeVip(Number(e.target.value))} className="w-full p-3 rounded-xl bg-zinc-800 border border-zinc-700 text-white">
                     <option value={7}>7 jours</option>
                     <option value={30}>30 jours</option>
                     <option value={90}>90 jours</option>
@@ -736,17 +727,10 @@ const courses = ["C1", "C2", "C3", "C4", "C5", "C6", "C7", "C8", "C9", "C10"];
                   </select>
                 </div>
                 <div className="flex gap-4">
-                  <button
-                    onClick={activerVip}
-                    disabled={loadingVip}
-                    className="flex-1 bg-green-600 hover:bg-green-700 py-3 rounded-xl font-bold transition"
-                  >
+                  <button onClick={activerVip} disabled={loadingVip} className="flex-1 bg-green-600 hover:bg-green-700 py-3 rounded-xl font-bold transition">
                     ⭐ Activer VIP
                   </button>
-                  <button
-                    onClick={desactiverVip}
-                    className="flex-1 bg-red-700 hover:bg-red-800 py-3 rounded-xl font-bold transition"
-                  >
+                  <button onClick={desactiverVip} className="flex-1 bg-red-700 hover:bg-red-800 py-3 rounded-xl font-bold transition">
                     🚫 Désactiver
                   </button>
                 </div>
