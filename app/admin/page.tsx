@@ -7,8 +7,7 @@ import { supabase } from "../supabase";
 export default function AdminPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<"predictions" | "vip" | "paiements" | "statistiques" | "membres">("predictions");
-
+  const [activeTab, setActiveTab] = useState<"predictions" | "vip" | "paiements" | "statistiques" | "membres" | "vip_pronostics">("predictions");
   const [reunion, setReunion] = useState("");
   const [course, setCourse] = useState("");
   const [hippodrome, setHippodrome] = useState("");
