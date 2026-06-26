@@ -49,6 +49,20 @@ export default function AbonnementPage() {
     }
 
     setSucces(true);
+    // Notification Telegram
+    await fetch(
+      `https://api.telegram.org/bot8998945170:AAHWfvIl35vDNAgkguWHhi_-o_FdlW84tLU/sendMessage`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          chat_id: "8532710106",
+          text: `🔔 Nouveau paiement !\n\n👤 Nom: ${nom}\n📱 Téléphone: ${telephone}\n📋 Plan: ${plan === "weekly" ? "Hebdomadaire" : "Mensuel"}\n💰 Montant: ${montant.toLocaleString()} GNF\n🔑 Référence: ${reference}\n\n✅ Connectez-vous pour valider !`,
+        }),
+      }
+    );
+
+    setSucces(true);
   }
 
   if (succes) return (
