@@ -398,35 +398,27 @@ const courses = ["C1", "C2", "C3", "C4", "C5", "C6", "C7", "C8", "C9", "C10"];
     </select>
   </div>
 
-  {/* HIPPODROME */}
-  <div>
-    <label className="text-zinc-400 text-sm mb-1 block">Hippodrome</label>
-    <select
-      className="w-full p-3 rounded-xl bg-zinc-800 border border-zinc-700 text-white focus:border-green-500 focus:outline-none transition"
-      value={hippodrome}
-      onChange={(e) => {
-        const h = hippodromes.find((x) => x.nom === e.target.value);
-        setHippodrome(e.target.value);
-        if (h) setDistance(h.distance);
-      }}
-    >
-      <option value="">-- Choisir --</option>
-      {hippodromes.map((h) => (
-        <option key={h.nom} value={h.nom}>{h.nom}</option>
-      ))}
-    </select>
-  </div>
+ {/* HIPPODROME */}
+<div>
+  <label className="text-zinc-400 text-sm mb-1 block">Hippodrome</label>
+  <input
+    className="w-full p-3 rounded-xl bg-zinc-800 border border-zinc-700 text-white focus:border-green-500 focus:outline-none transition"
+    placeholder="Ex: Enghien Soisy"
+    value={hippodrome}
+    onChange={(e) => setHippodrome(e.target.value)}
+  />
+</div>
 
-  {/* DISTANCE AUTO */}
-  <div>
-    <label className="text-zinc-400 text-sm mb-1 block">Distance (m) — auto</label>
-    <input
-      className="w-full p-3 rounded-xl bg-zinc-700 border border-zinc-600 text-white focus:border-green-500 focus:outline-none transition"
-      value={distance}
-      onChange={(e) => setDistance(e.target.value)}
-      placeholder="Rempli automatiquement"
-    />
-  </div>
+{/* DISTANCE */}
+<div>
+  <label className="text-zinc-400 text-sm mb-1 block">Distance (m)</label>
+  <input
+    className="w-full p-3 rounded-xl bg-zinc-800 border border-zinc-700 text-white focus:border-green-500 focus:outline-none transition"
+    placeholder="Ex: 1800"
+    value={distance}
+    onChange={(e) => setDistance(e.target.value)}
+  />
+</div>
 
   {/* BASE */}
   <div>
