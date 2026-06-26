@@ -215,7 +215,21 @@ export default function AdminPage() {
     await supabase.auth.signOut();
     router.push("/connexion");
   }
+const hippodromes = [
+  { nom: "Vincennes", distance: "2700" },
+  { nom: "Longchamp", distance: "2400" },
+  { nom: "Chantilly", distance: "1600" },
+  { nom: "Auteuil", distance: "3200" },
+  { nom: "Saint-Cloud", distance: "2000" },
+  { nom: "Deauville", distance: "1800" },
+  { nom: "Compiègne", distance: "1600" },
+  { nom: "Lyon-Parilly", distance: "1700" },
+  { nom: "Marseille-Borély", distance: "1600" },
+  { nom: "Cagnes-sur-Mer", distance: "1600" },
+];
 
+const reunions = ["R1", "R2", "R3", "R4", "R5", "R6", "R7"];
+const courses = ["C1", "C2", "C3", "C4", "C5", "C6", "C7", "C8", "C9", "C10"];
   if (loading) return (
     <main className="min-h-screen bg-black flex items-center justify-center">
       <div className="text-center">
@@ -353,45 +367,145 @@ export default function AdminPage() {
               <h2 className="text-3xl font-bold text-green-400 mb-6">📊 Pronostics du jour</h2>
               <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-8 space-y-4">
                 <div className="grid grid-cols-2 gap-4">
-                  {[
-                    { label: "Réunion", value: reunion, set: setReunion },
-                    { label: "Course", value: course, set: setCourse },
-                    { label: "Hippodrome", value: hippodrome, set: setHippodrome },
-                    { label: "Distance (m)", value: distance, set: setDistance },
-                    { label: "Base", value: base1, set: setBase1 },
-                    { label: "Belle chance", value: belle1, set: setBelle1 },
-                    { label: "Outsider", value: outsider1, set: setOutsider1 },
-                    { label: "Gros rapport", value: grosRapport, set: setGrosRapport },
-                    { label: "Ticket", value: ticket, set: setTicket },
-                  ].map((field) => (
-                    <div key={field.label}>
-                      <label className="text-zinc-400 text-sm mb-1 block">{field.label}</label>
-                      <input
-                        className="w-full p-3 rounded-xl bg-zinc-800 border border-zinc-700 text-white focus:border-green-500 focus:outline-none transition"
-                        value={field.value}
-                        onChange={(e) => field.set(e.target.value)}
-                      />
-                    </div>
-                  ))}
-                </div>
-                <div>
-                  <label className="text-zinc-400 text-sm mb-1 block">Analyse</label>
-                  <textarea
-                    rows={5}
-                    className="w-full p-3 rounded-xl bg-zinc-800 border border-zinc-700 text-white focus:border-green-500 focus:outline-none transition"
-                    value={analysis}
-                    onChange={(e) => setAnalysis(e.target.value)}
-                  />
-                </div>
-                <button
-                  onClick={sauvegarder}
-                  className="bg-green-600 hover:bg-green-700 px-8 py-3 rounded-xl font-bold text-lg transition"
-                >
-                  💾 Sauvegarder
-                </button>
-              </div>
+
+  {/* RÉUNION */}
+  <div>
+    <label className="text-zinc-400 text-sm mb-1 block">Réunion</label>
+    <select
+      className="w-full p-3 rounded-xl bg-zinc-800 border border-zinc-700 text-white focus:border-green-500 focus:outline-none transition"
+      value={reunion}
+      onChange={(e) => setReunion(e.target.value)}
+    >
+      <option value="">-- Choisir --</option>
+      {reunions.map((r) => (
+        <option key={r} value={r}>{r}</option>
+      ))}
+    </select>
+  </div>
+
+  {/* COURSE */}
+  <div>
+    <label className="text-zinc-400 text-sm mb-1 block">Course</label>
+    <select
+      className="w-full p-3 rounded-xl bg-zinc-800 border border-zinc-700 text-white focus:border-green-500 focus:outline-none transition"
+      value={course}
+      onChange={(e) => setCourse(e.target.value)}
+    >
+      <option value="">-- Choisir --</option>
+      {courses.map((c) => (
+        <option key={c} value={c}>{c}</option>
+      ))}
+    </select>
+  </div>
+
+  {/* HIPPODROME */}
+  <div>
+    <label className="text-zinc-400 text-sm mb-1 block">Hippodrome</label>
+    <select
+      className="w-full p-3 rounded-xl bg-zinc-800 border border-zinc-700 text-white focus:border-green-500 focus:outline-none transition"
+      value={hippodrome}
+      onChange={(e) => {
+        const h = hippodromes.find((x) => x.nom === e.target.value);
+        setHippodrome(e.target.value);
+        if (h) setDistance(h.distance);
+      }}
+    >
+      <option value="">-- Choisir --</option>
+      {hippodromes.map((h) => (
+        <option key={h.nom} value={h.nom}>{h.nom}</option>
+      ))}
+    </select>
+  </div>
+
+  {/* DISTANCE AUTO */}
+  <div>
+    <label className="text-zinc-400 text-sm mb-1 block">Distance (m) — auto</label>
+    <input
+      className="w-full p-3 rounded-xl bg-zinc-700 border border-zinc-600 text-white focus:border-green-500 focus:outline-none transition"
+      value={distance}
+      onChange={(e) => setDistance(e.target.value)}
+      placeholder="Rempli automatiquement"
+    />
+  </div>
+
+  {/* BASE */}
+  <div>
+    <label className="text-zinc-400 text-sm mb-1 block">Base</label>
+    <input
+      className="w-full p-3 rounded-xl bg-zinc-800 border border-zinc-700 text-white focus:border-green-500 focus:outline-none transition"
+      value={base1}
+      onChange={(e) => setBase1(e.target.value)}
+      placeholder="Ex: JAGUAR DU RIB"
+    />
+  </div>
+
+  {/* BELLE CHANCE */}
+  <div>
+    <label className="text-zinc-400 text-sm mb-1 block">Belle chance</label>
+    <input
+      className="w-full p-3 rounded-xl bg-zinc-800 border border-zinc-700 text-white focus:border-green-500 focus:outline-none transition"
+      value={belle1}
+      onChange={(e) => setBelle1(e.target.value)}
+      placeholder="Ex: IBIS PETTEVINIERE"
+    />
+  </div>
+
+  {/* OUTSIDER */}
+  <div>
+    <label className="text-zinc-400 text-sm mb-1 block">Outsider</label>
+    <input
+      className="w-full p-3 rounded-xl bg-zinc-800 border border-zinc-700 text-white focus:border-green-500 focus:outline-none transition"
+      value={outsider1}
+      onChange={(e) => setOutsider1(e.target.value)}
+      placeholder="Ex: HIRONDELLE FEE"
+    />
+  </div>
+
+  {/* GROS RAPPORT */}
+  <div>
+    <label className="text-zinc-400 text-sm mb-1 block">Gros rapport</label>
+    <input
+      className="w-full p-3 rounded-xl bg-zinc-800 border border-zinc-700 text-white focus:border-green-500 focus:outline-none transition"
+      value={grosRapport}
+      onChange={(e) => setGrosRapport(e.target.value)}
+      placeholder="Ex: CHEVAL SURPRISE"
+    />
+  </div>
+
+  {/* TICKET */}
+  <div className="col-span-2">
+    <label className="text-zinc-400 text-sm mb-1 block">Ticket</label>
+    <input
+      className="w-full p-3 rounded-xl bg-zinc-800 border border-zinc-700 text-white focus:border-green-500 focus:outline-none transition"
+      value={ticket}
+      onChange={(e) => setTicket(e.target.value)}
+      placeholder="Ex: 4-7-9"
+    />
+  </div>
+
+</div>
+
+{/* ANALYSE */}
+<div>
+  <label className="text-zinc-400 text-sm mb-1 block">Analyse</label>
+  <textarea
+    rows={5}
+    className="w-full p-3 rounded-xl bg-zinc-800 border border-zinc-700 text-white focus:border-green-500 focus:outline-none transition"
+    value={analysis}
+    onChange={(e) => setAnalysis(e.target.value)}
+    placeholder="Votre analyse complète..."
+  />
+</div>
+
+<button
+  onClick={sauvegarder}
+  className="bg-green-600 hover:bg-green-700 px-8 py-3 rounded-xl font-bold text-lg transition"
+>
+  💾 Sauvegarder
+</button>
             </div>
-          )}
+          </div>
+        )}
 
           {/* ONGLET PAIEMENTS */}
           {activeTab === "paiements" && (
