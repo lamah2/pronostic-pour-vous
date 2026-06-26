@@ -1,5 +1,5 @@
 "use client";
-
+import DateDuJour from "@/app/components/DateDuJour";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "../supabase";
@@ -280,7 +280,7 @@ const courses = ["C1", "C2", "C3", "C4", "C5", "C6", "C7", "C8", "C9", "C10"];
             <h1 className="text-2xl font-extrabold text-green-400">🐎 PMU Admin</h1>
             <p className="text-zinc-500 text-sm mt-1">Tableau de bord</p>
           </div>
-
+           <DateDuJour />
           <nav className="flex flex-col gap-2 flex-1">
             {[
               { id: "statistiques", icon: "📈", label: "Statistiques" },

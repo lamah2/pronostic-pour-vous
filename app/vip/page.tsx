@@ -1,5 +1,5 @@
 "use client";
-
+import DateDuJour from "../components/DateDuJour";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "../supabase";
@@ -80,7 +80,7 @@ export default function VipPage() {
         >
           🐎 PRONOSTIC POUR VOUS
         </h1>
-
+       <DateDuJour /> 
         <div className="flex items-center gap-3">
           <span className="bg-yellow-500 text-black text-xs font-bold px-3 py-1 rounded-full">
             ⭐ VIP — {jours} jours restants

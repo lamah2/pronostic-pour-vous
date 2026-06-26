@@ -1,5 +1,5 @@
 "use client";
-
+import DateDuJour from "@/app/components/DateDuJour";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "../supabase";
@@ -96,6 +96,7 @@ export default function AbonnementPage() {
         >
           🐎 PRONOSTIC POUR VOUS
         </h1>
+        <DateDuJour />
         <button
           onClick={() => router.push("/")}
           className="border border-zinc-700 hover:border-green-500 text-zinc-300 hover:text-green-400 px-4 py-2 rounded-lg text-sm transition"

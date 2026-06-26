@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "./supabase";
 import Notification from "./components/Notification";
+import DateDuJour from "./components/DateDuJour";
 export default function Home() {
   const router = useRouter();
   const [prediction, setPrediction] = useState<any>(null);
@@ -66,6 +67,7 @@ export default function Home() {
         <h1 className="text-2xl font-extrabold text-green-400">
           🐎 PRONOSTIC POUR VOUS
         </h1>
+        <DateDuJour />
 
         <nav className="flex items-center gap-4">
           {session ? (

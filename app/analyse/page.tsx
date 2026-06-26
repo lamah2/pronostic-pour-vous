@@ -1,5 +1,5 @@
 "use client";
-
+import DateDuJour from "@/app/components/DateDuJour";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "../supabase";
@@ -78,6 +78,7 @@ export default function AnalysePage() {
           🐎 PRONOSTIC POUR VOUS
         </h1>
         <div className="flex items-center gap-3">
+          <DateDuJour />
           <button
             onClick={() => router.push("/vip")}
             className="bg-yellow-500 text-black px-4 py-2 rounded-lg font-bold text-sm"
