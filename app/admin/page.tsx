@@ -37,7 +37,9 @@ export default function AdminPage() {
     vipActifs: 0,
     vipExpires: 0,
   });
-
+const [coupleVip, setCoupleVip] = useState("");
+const [selectionVip, setSelectionVip] = useState("");
+const [arriveeVip, setArriveeVip] = useState("");
   useEffect(() => { verifierAdmin(); }, []);
 
   async function verifierAdmin() {
@@ -56,9 +58,21 @@ export default function AdminPage() {
     await chargerPaiements();
     await chargerPrediction();
     await chargerMembresVip();
+    await chargerVipPronostics();
     setLoading(false);
   }
+async function chargerVipPronostics() {
+  const { data } = await supabase
+    .from("vip_pronostics")
+    .select("*")
+    .single();
 
+  if (data) {
+    setCoupleVip(data.couple_vip || "");
+    setSelectionVip(data.selection_vip || "");
+    setArriveeVip(data.arrivee || "");
+  }
+}
   async function chargerPrediction() {
     const { data } = await supabase.from("predictions").select("*").limit(1).single();
     if (data) {
@@ -125,7 +139,25 @@ export default function AdminPage() {
       }));
     }
   }
+async function sauvegarderVip() {
+  const { error } = await supabase
+    .from("vip_pronostics")
+    .update({
+      couple_vip: coupleVip,
+      selection_vip: selectionVip,
+      arrivee: arriveeVip,
+    })
+    .eq("id", 1);
 
+  if (error) {
+    alert("❌ Erreur : " + error.message);
+  } else {
+    alert("✅ Pronostics VIP sauvegardés !");
+  }
+
+
+  alert("✅ Pronostics VIP sauvegardés !");
+}
   async function sauvegarder() {
     const { error } = await supabase.from("predictions").update({
       reunion, course, hippodrome, distance,
@@ -255,7 +287,9 @@ const courses = ["C1", "C2", "C3", "C4", "C5", "C6", "C7", "C8", "C9", "C10"];
               { id: "statistiques", icon: "📈", label: "Statistiques" },
               { id: "predictions", icon: "📊", label: "Pronostics" },
               { id: "paiements", icon: "💰", label: "Paiements" },
-              { id: "membres", icon: "👑", label: "Membres VIP" },
+              { id: "membres", icon: "👑", label: "Membres VIP" 
+              },
+              { id: "vip_pronostics", icon: "👑", label: "Pronostics VIP" },
               { id: "vip", icon: "⭐", label: "Gestion VIP" },
             ].map((tab) => (
               <button
@@ -620,7 +654,60 @@ const courses = ["C1", "C2", "C3", "C4", "C5", "C6", "C7", "C8", "C9", "C10"];
               </div>
             </div>
           )}
+{/* ONGLET PRONOSTICS VIP */}
+{activeTab === "vip_pronostics" && (
+  <div>
+    <h2 className="text-3xl font-bold text-yellow-400 mb-6">
+      👑 Pronostics VIP du jour
+    </h2>
 
+    <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-8 space-y-6 max-w-xl">
+
+      <div>
+        <label className="text-zinc-400 text-sm mb-1 block">
+          💛 Couplé VIP
+        </label>
+        <input
+          className="w-full p-3 rounded-xl bg-zinc-800 border border-zinc-700 text-white focus:border-yellow-500 focus:outline-none transition"
+          placeholder="Ex: 3-7"
+          value={coupleVip}
+          onChange={(e) => setCoupleVip(e.target.value)}
+        />
+      </div>
+
+      <div>
+        <label className="text-zinc-400 text-sm mb-1 block">
+          🎯 Sélection Tiercé Quarté Quinté (6)
+        </label>
+        <input
+          className="w-full p-3 rounded-xl bg-zinc-800 border border-zinc-700 text-white focus:border-yellow-500 focus:outline-none transition"
+          placeholder="Ex: 3-7-12-1-13-11"
+          value={selectionVip}
+          onChange={(e) => setSelectionVip(e.target.value)}
+        />
+      </div>
+
+      <div>
+        <label className="text-zinc-400 text-sm mb-1 block">
+          🏆 Arrivée
+        </label>
+        <input
+          className="w-full p-3 rounded-xl bg-zinc-800 border border-zinc-700 text-white focus:border-yellow-500 focus:outline-none transition"
+          placeholder="Ex: 3-7-12-1-13"
+          value={arriveeVip}
+          onChange={(e) => setArriveeVip(e.target.value)}
+        />
+      </div>
+
+      <button
+        onClick={sauvegarderVip}
+        className="w-full bg-yellow-500 hover:bg-yellow-400 text-black py-3 rounded-xl font-bold text-lg transition"
+      >
+        💾 Sauvegarder les pronostics VIP
+      </button>
+    </div>
+  </div>
+)}
           {/* ONGLET GESTION VIP */}
           {activeTab === "vip" && (
             <div>
