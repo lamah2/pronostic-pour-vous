@@ -140,24 +140,15 @@ export default function AdminPage() {
   }
 
   async function extraireAvecIA(base64: string, type: "pct" | "num"): Promise<any[]> {
-    const prompt = type === "pct"
-      ? "Extrait tous les noms de chevaux et leurs pourcentages. Réponds UNIQUEMENT en JSON: [{\"nom\":\"NomCheval\",\"pct\":14.98},...]. Convertis virgules en points."
-      : "Extrait tous les numéros et noms de chevaux de ce tableau. Réponds UNIQUEMENT en JSON: [{\"num\":1,\"nom\":\"MARILOU\"},...].";
-    const resp = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: "claude-sonnet-4-6", max_tokens: 1000,
-        messages: [{ role: "user", content: [
-          { type: "image", source: { type: "base64", media_type: "image/jpeg", data: base64 } },
-          { type: "text", text: prompt }
-        ]}]
-      })
-    });
-    const d = await resp.json();
-    const txt = d.content.map((i: any) => i.text || "").join("");
-    return JSON.parse(txt.replace(/```json|```/g, "").trim());
-  }
+  const resp = await fetch("/api/analyser-image", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ base64, type }),
+  });
+  const d = await resp.json();
+  if (d.error) throw new Error(d.error);
+  return d.result;
+}
 
   function parsePct(texte: string): {nom: string; pct: number}[] {
     const re = /^(.*?)\s*[\(\[\{]?\s*(\d+[,\.]\d+)\s*%?\s*[\)\]\}]?$/;
